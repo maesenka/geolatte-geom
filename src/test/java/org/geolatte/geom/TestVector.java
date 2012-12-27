@@ -149,5 +149,28 @@ public class TestVector {
         perpDot(Point.EMPTY, Points.create2D(1, 2));
     }
 
+    @Test
+    public void testAngleBasicCase(){
+        Point p0 = Points.create2D(-2, 0);
+        Point p1 = Points.create2D(0, 3);
+        Point p2 = Points.create2D(1, 1);
+        Point p3 = Points.create2D(5, 0);
+        Point p4 = Points.create2D(1, -1);
+
+        double epsilon = Math.ulp(100);
+
+        assertEquals(-Math.PI / 2, angle(p0, p1), epsilon);
+        assertEquals(Math.PI / 2, angle(p1, p0), epsilon);
+        assertEquals(-(3 * Math.PI) / 4, angle(p0, p2), epsilon);
+        assertEquals((3 * Math.PI) / 4, angle(p2, p0), epsilon);
+        assertEquals(Math.PI / 4, angle(p2, p1), epsilon);
+        assertEquals(Math.PI / 2, angle(p3, p1), epsilon);
+        assertEquals(Math.PI, angle(p3, p0), epsilon);
+        assertEquals(- Math.PI, angle(p0, p3), epsilon);
+        assertEquals((3.0/4.0) * Math.PI, angle(p0, p4), epsilon);
+        assertEquals(-(3.0/4.0) * Math.PI, angle(p4, p0), epsilon);
+        assertEquals(0, angle(p0, p0),epsilon);
+    }
+
 }
 

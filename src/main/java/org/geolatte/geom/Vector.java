@@ -148,7 +148,7 @@ public class Vector {
 
 
     /**
-     * Applies the perp dot-operation on the specified <code>Point</code>s
+     * Applies the perp dot-operation on the vectors determined by the specified <code>Point</code>s
      *
      * <p>The perp dot operation on vectors <code>P</code>, <code>Q</code> is defined as
      * <code>dot(perp(P),Q)</code>.</p>
@@ -164,6 +164,35 @@ public class Vector {
             throw new IllegalArgumentException("Null or empty Point passed.");
         }
             return -p0.getY() * p1.getX() + p0.getX() * p1.getY();
+
+    }
+
+    public static double norm(Point p) {
+        return Math.hypot(p.getX(), p.getY());
+    }
+
+
+    /**
+     * Returns the angle between the vectors determined by the specified {@code Point}s.
+     *
+     * <p>If the angle from the first to the second operand is counterclockwise, then the result is positive.</p>
+     *
+     * @param p0 the first operand
+     * @param p1 the second operand
+     * @return the angle between first and second operands.
+     */
+    public static double angle(Point p0, Point p1) {
+//        return Math.signum(perpDot(p0,p1))*Math.acos(dot(p0, p1) / (norm(p0) * norm(p1)));
+        double a1 = Math.atan2(p0.getY(), p0.getX());
+        double a2 = Math.atan2(p1.getY(), p1.getX());
+        double dAngle = a2 - a1;
+        if (dAngle < - Math.PI) {
+            return 2*Math.PI + dAngle;
+        } else if (dAngle > Math.PI) {
+            return dAngle - 2*Math.PI;
+        } else {
+            return dAngle;
+        }
 
     }
 
