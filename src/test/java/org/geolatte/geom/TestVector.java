@@ -156,6 +156,7 @@ public class TestVector {
         Point p2 = Points.create2D(1, 1);
         Point p3 = Points.create2D(5, 0);
         Point p4 = Points.create2D(1, -1);
+        Point p5 = Points.create2D(-4, -4);
 
         double epsilon = Math.ulp(100);
 
@@ -167,9 +168,12 @@ public class TestVector {
         assertEquals(Math.PI / 2, angle(p3, p1), epsilon);
         assertEquals(Math.PI, angle(p3, p0), epsilon);
         assertEquals(- Math.PI, angle(p0, p3), epsilon);
-        assertEquals((3.0/4.0) * Math.PI, angle(p0, p4), epsilon);
-        assertEquals(-(3.0/4.0) * Math.PI, angle(p4, p0), epsilon);
+        assertEquals(-(5.0/4.0) * Math.PI, angle(p0, p4), epsilon);
+        assertEquals((5.0/4.0) * Math.PI, angle(p4, p0), epsilon);
         assertEquals(0, angle(p0, p0),epsilon);
+        assertEquals((7.0 / 4.) * Math.PI, angle(p5, p0), epsilon);
+        assertEquals(-Math.PI / 2, angle(p4, p5), epsilon);
+        assertEquals(Math.PI / 2, angle(p5, p4), epsilon);
     }
 
 }

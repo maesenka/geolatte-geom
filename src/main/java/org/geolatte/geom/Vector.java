@@ -46,15 +46,15 @@ public class Vector {
      */
     public static double[] pointToSegment2D(Point p0, Point p1, Point y) {
         //for algorithm, see "Geometric Tools for Computer Graphics", Ch. 6.
-        Point d = Vector.substract(p1, p0);
-        Point ymp0 = Vector.substract(y, p0);
+        Point d = Vector.subtract(p1, p0);
+        Point ymp0 = Vector.subtract(y, p0);
         double t = Vector.dot(d, ymp0, true);
         double dd = Vector.dot(d, d);
         if (t <= 0) {
             return new double[]{Vector.dot(ymp0, ymp0), t / dd};
         }
         if (t >= dd) {
-            Point ymp1 = Vector.substract(y, p1);
+            Point ymp1 = Vector.subtract(y, p1);
             return new double[]{Vector.dot(ymp1, ymp1), t / dd};
         }
         return new double[]{Vector.dot(ymp0, ymp0) - (t * t / dd), t / dd};
@@ -116,7 +116,7 @@ public class Vector {
      * @param p1 second operand
      * @returns the Point x = p0 - p1.
      */
-    public static Point substract(Point p0, Point p1) {
+    public static Point subtract(Point p0, Point p1) {
         if (p0.is3D() && p1.is3D()) {
             return Points.create3D(p0.getX() - p1.getX(), p0.getY() - p1.getY(), p0.getZ() - p1.getZ());
         } else {
@@ -173,27 +173,19 @@ public class Vector {
 
 
     /**
-     * Returns the angle between the vectors determined by the specified {@code Point}s.
+     * Returns the angle between the vectors in the 2D-plane determined by the specified {@code Point}s.
      *
-     * <p>If the angle from the first to the second operand is counterclockwise, then the result is positive.</p>
+     * <p>The result will be in the range of [0, 2*PI]. If the angle from the first to the second operand is counterclockwise, then the result is positive.</p>
+     *
      *
      * @param p0 the first operand
      * @param p1 the second operand
      * @return the angle between first and second operands.
      */
     public static double angle(Point p0, Point p1) {
-//        return Math.signum(perpDot(p0,p1))*Math.acos(dot(p0, p1) / (norm(p0) * norm(p1)));
         double a1 = Math.atan2(p0.getY(), p0.getX());
         double a2 = Math.atan2(p1.getY(), p1.getX());
-        double dAngle = a2 - a1;
-        if (dAngle < - Math.PI) {
-            return 2*Math.PI + dAngle;
-        } else if (dAngle > Math.PI) {
-            return dAngle - 2*Math.PI;
-        } else {
-            return dAngle;
-        }
-
+        return a2 - a1;
     }
 
 }
