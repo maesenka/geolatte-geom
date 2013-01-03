@@ -30,29 +30,29 @@ import java.util.Set;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 1/3/13
  */
-public class DefaultOutgoingEdgesFinder implements OutgoingEdgesFinder {
+public class DefaultOutgoingEdgesFinder<V extends Vertex, E extends HalfEdge, F extends Face> implements OutgoingEdgesFinder<V,E,F> {
 
-    final private Dcel dcel;
-    final private Set<HalfEdge> visitedHalfEdges = new HashSet<HalfEdge>(20);
+    final private Dcel<V,E,F> dcel;
+    final private Set<E> visitedHalfEdges = new HashSet<E>(20);
 
-    public DefaultOutgoingEdgesFinder(Dcel dcel){
+    public DefaultOutgoingEdgesFinder(Dcel<V,E,F> dcel){
         this.dcel = dcel;
         visitedHalfEdges.clear();
     }
 
     @Override
-    public List<HalfEdge> getOutgoing(Vertex v, List<HalfEdge> resultList) {
+    public List<E> getOutgoing(V v, List<E> resultList) {
         if (resultList == null) {
-            resultList = new ArrayList<HalfEdge>();
+            resultList = new ArrayList<E>();
         } else {
             resultList.clear();
         }
-        HalfEdge e = dcel.getIncidentEdge(v);
+        E e = dcel.getIncidentEdge(v);
 
         while (!visitedHalfEdges.contains(e)){
             visitedHalfEdges.add(e);
             resultList.add(e);
-            HalfEdge eTwin = dcel.getTwin(e);
+            E eTwin = dcel.getTwin(e);
             e = dcel.getNext(eTwin);
         }
         return resultList;

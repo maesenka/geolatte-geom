@@ -32,15 +32,15 @@ import java.util.Set;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public interface Dcel {
+public interface Dcel<V extends Vertex, E extends HalfEdge, F extends Face> {
 
     public Envelope getEnvelope();
 
-    public HalfEdge getIncidentEdge(Vertex vertex);
+    public E getIncidentEdge(V vertex);
 
-    public HalfEdge getOuterComponent(Face face);
+    public E getOuterComponent(F face);
 
-    public Collection<HalfEdge> getInnerComponents(Face face);
+    public Collection<E> getInnerComponents(F face);
 
 
     /**
@@ -49,7 +49,7 @@ public interface Dcel {
      * @param he the {@code HalfEdge}
      * @return the origin {@code Vertex} for the {@code HalfEdge} specified by the parameter <code>he</code>
      */
-    public Vertex getOrigin(HalfEdge he);
+    public V getOrigin(E he);
 
     /**
      * Get the twin {@code HalfEdge} for the specified {@code HalfEdge}
@@ -60,7 +60,7 @@ public interface Dcel {
      * @param he the {@code HalfEdge}
      * @return the origin {@code Vertex} for the {@code HalfEdge} specified by the parameter <code>he</code>
      */
-    public HalfEdge getTwin(HalfEdge he);
+    public E getTwin(E he);
 
     /**
      * Returns the {@code Face} that is bounded by the specified {@code HalfEdge}
@@ -70,7 +70,7 @@ public interface Dcel {
      * @param he the {@code HalfEdge}
      * @return the {@code Face} bounded by and to the left of the {@code HalfEdge} specified by the parameter <code>he</code>
      */
-    public Face getIncidentFace(HalfEdge he);
+    public F getIncidentFace(E he);
 
     /**
      * Returns the next {@code HalfEdge} when traversing the boundaries of the incident {@code Face} of the specified {@code HalfEdge} in
@@ -83,7 +83,7 @@ public interface Dcel {
      * @return the next {@code HalfEdge} in a counterclockwise traversal of the boundaries of the face incident to the specified {@code halfEdge}.
      *
      */
-    public HalfEdge getNext(HalfEdge he);
+    public E getNext(E he);
 
     /**
      * Returns the previous {@code HalfEdge} when traversing the boundaries of the incident {@code Face} of the specified {@code HalfEdge} in
@@ -96,13 +96,13 @@ public interface Dcel {
      * @return the previous {@code HalfEdge} in a counterclockwise traversal of the boundaries of the face incident to the specified {@code halfEdge}.
      *
      */
-    public HalfEdge getPrevious(HalfEdge he);
+    public E getPrevious(E he);
 
-    public Face getUnboundedFace();
+    public F getUnboundedFace();
 
-    public Set<Face> getFaces();
+    public Set<F> getFaces();
 
-    public Set<HalfEdge> getHalfEdges();
+    public Set<E> getHalfEdges();
 
-    public Set<Vertex> getVertices();
+    public Set<V> getVertices();
 }

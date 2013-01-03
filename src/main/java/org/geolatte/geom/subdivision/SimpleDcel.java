@@ -29,17 +29,17 @@ import java.util.*;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-class SimpleDcel implements Dcel {
+class SimpleDcel<V extends Vertex, E extends HalfEdge, F extends Face> implements Dcel<V,E,F> {
 
-    final private SimpleVertexList vertices;
+    final private SimpleVertexList<V, E> vertices;
 
-    final private SimpleHalfEdgeList halfEdges;
+    final private SimpleHalfEdgeList<V,E,F> halfEdges;
 
-    final private SimpleFaceList faces;
+    final private SimpleFaceList<E, F> faces;
 
     final private Envelope envelope;
 
-    SimpleDcel(Envelope env, SimpleVertexList vertices, SimpleHalfEdgeList edges, SimpleFaceList faces){
+    SimpleDcel(Envelope env, SimpleVertexList<V,E> vertices, SimpleHalfEdgeList<V,E,F> edges, SimpleFaceList<E,F> faces){
         this.envelope = env;
         this.vertices = vertices;
         this.halfEdges = edges;
@@ -49,22 +49,22 @@ class SimpleDcel implements Dcel {
 
 
     @Override
-    public Face getUnboundedFace() {
+    public F getUnboundedFace() {
         return this.faces.getUnboundedFace();
     }
 
     @Override
-    public Set<Face> getFaces() {
+    public Set<F> getFaces() {
         return this.faces.toSet();
     }
 
     @Override
-    public Set<HalfEdge> getHalfEdges() {
+    public Set<E> getHalfEdges() {
         return this.halfEdges.toSet();
     }
 
     @Override
-    public Set<Vertex> getVertices() {
+    public Set<V> getVertices() {
         return this.vertices.toSet();
     }
 
@@ -74,114 +74,114 @@ class SimpleDcel implements Dcel {
     }
 
     @Override
-    public HalfEdge getIncidentEdge(Vertex vertex) {
+    public E getIncidentEdge(V vertex) {
         return vertices.getIncidentEdge(vertex);
     }
 
     @Override
-    public HalfEdge getOuterComponent(Face face) {
+    public E getOuterComponent(F face) {
         return faces.getOuterComponent(face);
     }
 
     @Override
-    public Collection<HalfEdge> getInnerComponents(Face face) {
+    public Collection<E> getInnerComponents(F face) {
         return faces.getInnerComponents(face);
     }
 
     @Override
-    public Vertex getOrigin(HalfEdge he) {
+    public V getOrigin(E he) {
         return halfEdges.getOrigin(he);
     }
 
     @Override
-    public HalfEdge getTwin(HalfEdge he) {
+    public E getTwin(E he) {
         return halfEdges.getTwin(he);
     }
 
     @Override
-    public Face getIncidentFace(HalfEdge he) {
+    public F getIncidentFace(E he) {
         return halfEdges.getIncidentFace(he);
     }
 
     @Override
-    public HalfEdge getNext(HalfEdge he) {
+    public E getNext(E he) {
         return halfEdges.getNext(he);
     }
 
     @Override
-    public HalfEdge getPrevious(HalfEdge he) {
+    public E getPrevious(E he) {
         return halfEdges.getPrevious(he);
     }
 
-    static class SimpleVertexList {
-        final private Map<Vertex, HalfEdge> vertices;
+    static class SimpleVertexList<V extends Vertex, E extends HalfEdge> {
+        final private Map<V, E> vertices;
 
-        SimpleVertexList(Map<Vertex, HalfEdge> vertices){
+        SimpleVertexList(Map<V, E> vertices){
             this.vertices = vertices;
         }
 
 
-        public HalfEdge getIncidentEdge(Vertex vertex) {
-            HalfEdge result =  vertices.get(vertex);
+        public E getIncidentEdge(V vertex) {
+            E result =  vertices.get(vertex);
             if (result == null) {
                 throw new IllegalStateException("Vertex " + vertex + " is not an element of the DCEL.");
             }
             return result;
         }
 
-        public Set<Vertex> toSet() {
+        public Set<V> toSet() {
             return vertices.keySet();
         }
     }
 
-    static class SimpleFaceList {
+    static class SimpleFaceList<E extends HalfEdge, F extends Face> {
 
-        final private Map<Face,HalfEdge> outerComponentMap;
-        final private Map<Face, List<HalfEdge>> innerComponentsMap;
-        final private Face unboundedFace;
+        final private Map<F,E> outerComponentMap;
+        final private Map<F, List<E>> innerComponentsMap;
+        final private F unboundedFace;
 
-        SimpleFaceList(Map<Face,HalfEdge> outerComps, Map<Face, List<HalfEdge>> innerComps, Face unboundedFace){
+        SimpleFaceList(Map<F,E> outerComps, Map<F, List<E>> innerComps, F unboundedFace){
             this.outerComponentMap = outerComps;
             this.innerComponentsMap = innerComps;
             this.unboundedFace = unboundedFace;
         }
 
 
-        public HalfEdge getOuterComponent(Face face) {
-            HalfEdge result = outerComponentMap.get(face);
+        public E getOuterComponent(F face) {
+            E result = outerComponentMap.get(face);
 //            if (result == null) {
 //                throw new IllegalStateException("Face " + face + " is not an element of the DCEL.");
 //            } -- null returned for the unboundedface
             return result;
         }
 
-        public Collection<HalfEdge> getInnerComponents(Face face) {
-            List<HalfEdge> result = innerComponentsMap.get(face);
+        public Collection<E> getInnerComponents(F face) {
+            List<E> result = innerComponentsMap.get(face);
 //            if (result == null) {
 //                throw new IllegalStateException("Face " + face + " is not an element of the DCEL.");
 //            } -- currently null is stored in the case that there are no innercomponents (the normal case).
             return result;
         }
 
-        Face getUnboundedFace() {
+        F getUnboundedFace() {
             return unboundedFace;
         }
 
-        public Set<Face> toSet() {
+        public Set<F> toSet() {
             return outerComponentMap.keySet();
         }
     }
 
-    static class SimpleHalfEdgeList {
+    static class SimpleHalfEdgeList<V extends Vertex, E extends HalfEdge, F extends Face> {
 
-        final private Map<HalfEdge, HalfEdgeRecord> halfEdgeRecordMap;
+        final private Map<E, HalfEdgeRecord<V,E,F>> halfEdgeRecordMap;
 
-        SimpleHalfEdgeList(Map<HalfEdge, HalfEdgeRecord> halfEdgeRecordMap) {
+        SimpleHalfEdgeList(Map<E, HalfEdgeRecord<V,E,F>> halfEdgeRecordMap) {
             this.halfEdgeRecordMap = halfEdgeRecordMap;
         }
 
-        private HalfEdgeRecord getRecord(HalfEdge he){
-            HalfEdgeRecord record = halfEdgeRecordMap.get(he);
+        private HalfEdgeRecord<V,E,F> getRecord(E he){
+            HalfEdgeRecord<V,E,F> record = halfEdgeRecordMap.get(he);
             if (record == null) {
                 throw new IllegalStateException("HalfEdge " + he + " is not an element of the DCEL");
             }
@@ -189,80 +189,80 @@ class SimpleDcel implements Dcel {
         }
 
 
-        public Vertex getOrigin(HalfEdge he) {
+        public V getOrigin(E he) {
             return getRecord(he).origin;
         }
 
 
-        public HalfEdge getTwin(HalfEdge he) {
+        public E getTwin(E he) {
             return getRecord(he).twin;
         }
 
 
-        public Face getIncidentFace(HalfEdge he) {
+        public F getIncidentFace(E he) {
             return getRecord(he).incidentFace;
         }
 
 
-        public HalfEdge getNext(HalfEdge he) {
+        public E getNext(E he) {
             return getRecord(he).next;
         }
 
 
-        public HalfEdge getPrevious(HalfEdge he) {
+        public E getPrevious(E he) {
             return getRecord(he).prev;
         }
 
 
-        public Set<HalfEdge> toSet() {
+        public Set<E> toSet() {
             return halfEdgeRecordMap.keySet();
         }
     }
 
-    static class HalfEdgeRecord {
-        private Vertex origin;
-        private HalfEdge twin;
-        private Face incidentFace;
-        private HalfEdge next;
-        private HalfEdge prev;
+    static class HalfEdgeRecord<V extends Vertex, E extends HalfEdge, F extends Face> {
+        private V origin;
+        private E twin;
+        private F incidentFace;
+        private E next;
+        private E prev;
 
-        public Vertex getOrigin() {
+        public V getOrigin() {
             return origin;
         }
 
-        public void setOrigin(Vertex origin) {
+        public void setOrigin(V origin) {
             this.origin = origin;
         }
 
-        public HalfEdge getTwin() {
+        public E getTwin() {
             return twin;
         }
 
-        public void setTwin(HalfEdge twin) {
+        public void setTwin(E twin) {
             this.twin = twin;
         }
 
-        public Face getIncidentFace() {
+        public F getIncidentFace() {
             return incidentFace;
         }
 
-        public void setIncidentFace(Face incidentFace) {
+        public void setIncidentFace(F incidentFace) {
             this.incidentFace = incidentFace;
         }
 
-        public HalfEdge getNext() {
+        public E getNext() {
             return next;
         }
 
-        public void setNext(HalfEdge next) {
+        public void setNext(E next) {
             this.next = next;
         }
 
-        public HalfEdge getPrev() {
+        public E getPrev() {
             return prev;
         }
 
-        public void setPrev(HalfEdge prev) {
+        public void setPrev(E prev) {
             this.prev = prev;
         }
     }

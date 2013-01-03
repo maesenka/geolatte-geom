@@ -27,13 +27,13 @@ package org.geolatte.geom.subdivision;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public interface DcelBuilder {
+public interface DcelBuilder<V extends Vertex, E extends HalfEdge, F extends Face> {
 
     /**
      * Returns the constructed {@code Dcel}
      *
      * @return the constructed {@code Dcel}
      */
-    public Dcel toDcel();
+    public Dcel<V,E,F> toDcel();
 
 }

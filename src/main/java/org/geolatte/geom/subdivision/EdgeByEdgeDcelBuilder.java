@@ -36,42 +36,42 @@ import static org.geolatte.geom.Vector.*;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public class EdgeByEdgeDcelBuilder implements DcelBuilder {
+public class EdgeByEdgeDcelBuilder<V extends Vertex, E extends HalfEdge, F extends Face> implements DcelBuilder<V,E,F> {
 
     final private Envelope envelope;
-    final private Face unbounded;
+    final private F unbounded;
 
-    final private MinAngleFinder minAngleFinder = new MinAngleFinder();
+    final private MinAngleFinder<E> minAngleFinder = new MinAngleFinder<E>();
 
     //status information on the build state
-    final private VertexRecordList vertexRecordList = new VertexRecordList();
-    final Map<HalfEdge, SimpleDcel.HalfEdgeRecord> halfEdgeRecordMap = new HashMap<HalfEdge, SimpleDcel.HalfEdgeRecord>();
-    final private Map<Face, HalfEdge> outerComponentMap = new HashMap<Face, HalfEdge>();
+    final private VertexRecordList<V,E> vertexRecordList = new VertexRecordList<V,E>();
+    final Map<E, SimpleDcel.HalfEdgeRecord<V,E,F>> halfEdgeRecordMap = new HashMap<E, SimpleDcel.HalfEdgeRecord<V,E,F>>();
+    final private Map<F, E> outerComponentMap = new HashMap<F, E>();
     private int componentCounter = 0;
 
-    public EdgeByEdgeDcelBuilder(Envelope envelope, Face unbounded) {
+    public EdgeByEdgeDcelBuilder(Envelope envelope, F unbounded) {
         this.envelope = envelope;
         this.unbounded = unbounded;
         outerComponentMap.put(unbounded, null);
     }
 
-    public void addHalfEdge(Vertex origin, Vertex destination, Face leftFace, HalfEdge halfEdge) {
-        VertexRecord originRecord = vertexRecordList.getVertexRecord(origin);
-        VertexRecord destRecord = vertexRecordList.getVertexRecord(destination);
+    public void addHalfEdge(V origin, V destination, F leftFace, E halfEdge) {
+        VertexRecord<E> originRecord = vertexRecordList.getVertexRecord(origin);
+        VertexRecord<E> destRecord = vertexRecordList.getVertexRecord(destination);
         updateVertexRecords(originRecord, destRecord, halfEdge);
         setOuterComponent(leftFace, halfEdge);
         updateHalfEdgeRecordMap(origin, destination, leftFace, halfEdge, originRecord, destRecord);
     }
 
 
-    private void updateHalfEdgeRecordMap(Vertex origin, Vertex destination, Face leftFace, HalfEdge halfEdge, VertexRecord originRecord, VertexRecord destRecord) {
-        SimpleDcel.HalfEdgeRecord halfEdgeRecord = new SimpleDcel.HalfEdgeRecord();
+    private void updateHalfEdgeRecordMap(V origin, V destination, F leftFace, E halfEdge, VertexRecord<E> originRecord, VertexRecord<E> destRecord) {
+        SimpleDcel.HalfEdgeRecord<V,E,F> halfEdgeRecord = new SimpleDcel.HalfEdgeRecord<V,E,F>();
         halfEdgeRecord.setOrigin(origin);
         halfEdgeRecord.setIncidentFace(leftFace);
         halfEdgeRecordMap.put(halfEdge, halfEdgeRecord);
 
-        for(HalfEdge candidate: originRecord.incoming) {
-            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+        for(E candidate: originRecord.incoming) {
+            SimpleDcel.HalfEdgeRecord<V,E,F> candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
                 if (candidateRecord.getNext() == null) {
                     candidateRecord.setNext(halfEdge);
@@ -89,8 +89,8 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             }
         }
         //set next/prev at destination
-        for(HalfEdge candidate: destRecord.outgoing) {
-            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+        for(E candidate: destRecord.outgoing) {
+            SimpleDcel.HalfEdgeRecord<V,E,F> candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
                 if (candidateRecord.getPrev() == null){
                     halfEdgeRecord.setNext(candidate);
@@ -108,16 +108,16 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             }
         }
         //set twin
-        for (HalfEdge candidate: destRecord.outgoing) {
-            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+        for (E candidate: destRecord.outgoing) {
+            SimpleDcel.HalfEdgeRecord<V,E,F> candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord.getOrigin().equals(origin)) {
                 candidateRecord.setTwin(halfEdge);
                 halfEdgeRecord.setTwin(candidate);
                 break;
             }
         }
-        for (HalfEdge candidate: originRecord.incoming) {
-            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+        for (E candidate: originRecord.incoming) {
+            SimpleDcel.HalfEdgeRecord<V,E,F> candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord.getOrigin().equals(destination)) {
                 candidateRecord.setTwin(halfEdge);
                 halfEdgeRecord.setTwin(candidate);
@@ -127,7 +127,7 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
 
     }
 
-    private void setOuterComponent(Face leftFace, HalfEdge halfEdge) {
+    private void setOuterComponent(F leftFace, E halfEdge) {
         if (leftFace.isUnboundedFace()) {
             return;
         }
@@ -137,7 +137,7 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
     /**
      * Add vertices to the vertexRecordList and register the HalfEdge as incoming, resp. outgoing.
      */
-    private void updateVertexRecords(VertexRecord originRecord, VertexRecord destRecord, HalfEdge halfEdge) {
+    private void updateVertexRecords(VertexRecord<E> originRecord, VertexRecord<E> destRecord, E halfEdge) {
 
 
         if (isNewVertex(originRecord) && isNewVertex(destRecord)) {
@@ -164,29 +164,29 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
     }
 
     @Override
-    public Dcel toDcel() {
-        return new SimpleDcel(this.envelope,
+    public Dcel<V,E,F> toDcel() {
+        return new SimpleDcel<V,E,F>(this.envelope,
                 mkSimpleVertexList(), mkSimpleEdgeList(),
                 toSimpleFaceList());
     }
 
-    private SimpleDcel.SimpleFaceList toSimpleFaceList() {
-        Map<Face, List<HalfEdge>> innerComps = new HashMap<Face, List<HalfEdge>>();
+    private SimpleDcel.SimpleFaceList<E,F> toSimpleFaceList() {
+        Map<F, List<E>> innerComps = new HashMap<F, List<E>>();
         Set<Integer> visitedComponents = new TreeSet<Integer>();
-        for (Map.Entry<Vertex, VertexRecord> entry : vertexRecordList.all()) {
+        for (Map.Entry<V, VertexRecord<E>> entry : vertexRecordList.all()) {
             Integer currentComponent = entry.getValue().component;
             if (visitedComponents.contains(currentComponent)) {
                 continue;
             }
-            for( HalfEdge outgoing: entry.getValue().outgoing) {
-                Face incidentFace = halfEdgeRecordMap.get(outgoing).getIncidentFace();
-                HalfEdge boundary = outerComponentMap.get(incidentFace);
+            for( E outgoing: entry.getValue().outgoing) {
+                F incidentFace = halfEdgeRecordMap.get(outgoing).getIncidentFace();
+                E boundary = outerComponentMap.get(incidentFace);
                 if (boundary == null) {
                     addInnerComponent(innerComps, incidentFace, outgoing);
                     visitedComponents.add(currentComponent);
                     break;
                 } else {
-                    SimpleDcel.HalfEdgeRecord boundaryRecord = halfEdgeRecordMap.get(boundary);
+                    SimpleDcel.HalfEdgeRecord<V,E,F> boundaryRecord = halfEdgeRecordMap.get(boundary);
                     VertexRecord vertexRecord = vertexRecordList.getVertexRecord(boundaryRecord.getOrigin());
                     if (!vertexRecord.component.equals(currentComponent)) {
                         addInnerComponent(innerComps, incidentFace, outgoing);
@@ -196,39 +196,39 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
                 }
             }
         }
-        return new SimpleDcel.SimpleFaceList(outerComponentMap, innerComps, unbounded);
+        return new SimpleDcel.SimpleFaceList<E,F>(outerComponentMap, innerComps, unbounded);
     }
 
-    private void addInnerComponent(Map<Face, List<HalfEdge>> innerComps, Face outerFace, HalfEdge boundary) {
-        List<HalfEdge> innerEdges = innerComps.get(outerFace);
+    private void addInnerComponent(Map<F, List<E>> innerComps, F outerFace, E boundary) {
+        List<E> innerEdges = innerComps.get(outerFace);
         if (innerEdges == null) {
-            innerEdges = new ArrayList<HalfEdge>();
+            innerEdges = new ArrayList<E>();
             innerComps.put(outerFace, innerEdges);
         }
         innerEdges.add(boundary);
     }
 
-    private SimpleDcel.SimpleHalfEdgeList mkSimpleEdgeList() {
-        return new SimpleDcel.SimpleHalfEdgeList(halfEdgeRecordMap);
+    private SimpleDcel.SimpleHalfEdgeList<V,E,F> mkSimpleEdgeList() {
+        return new SimpleDcel.SimpleHalfEdgeList<V,E,F>(halfEdgeRecordMap);
     }
 
-    private SimpleDcel.SimpleVertexList mkSimpleVertexList() {
+    private SimpleDcel.SimpleVertexList<V,E> mkSimpleVertexList() {
 
-        Map<Vertex, HalfEdge> verticesMap = new HashMap<Vertex, HalfEdge>();
-        for (Map.Entry<Vertex, VertexRecord> entry : vertexRecordList.all()) {
+        Map<V, E> verticesMap = new HashMap<V, E>();
+        for (Map.Entry<V, VertexRecord<E>> entry : vertexRecordList.all()) {
             verticesMap.put(entry.getKey(), entry.getValue().outgoing.get(0));
         }
-        return new SimpleDcel.SimpleVertexList(verticesMap);
+        return new SimpleDcel.SimpleVertexList<V,E>(verticesMap);
     }
 
-    private static class VertexRecordList {
+    private static class VertexRecordList<V extends Vertex,E extends HalfEdge> {
 
-        final private Map<Vertex, VertexRecord> vertexRecordMap = new HashMap<Vertex, VertexRecord>();
+        final private Map<V, VertexRecord<E>> vertexRecordMap = new HashMap<V, VertexRecord<E>>();
 
-        VertexRecord getVertexRecord(Vertex v) {
-            VertexRecord record = vertexRecordMap.get(v);
+        VertexRecord<E> getVertexRecord(V v) {
+            VertexRecord<E> record = vertexRecordMap.get(v);
             if (record == null) {
-                record = new VertexRecord();
+                record = new VertexRecord<E>();
                 vertexRecordMap.put(v, record);
             }
             return record;
@@ -242,27 +242,27 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             }
         }
 
-        public Set<Map.Entry<Vertex, VertexRecord>> all() {
+        public Set<Map.Entry<V, VertexRecord<E>>> all() {
             return this.vertexRecordMap.entrySet();
         }
 
 
     }
 
-    private static class VertexRecord {
-        final List<HalfEdge> outgoing = new ArrayList<HalfEdge>();
-        final List<HalfEdge> incoming = new ArrayList<HalfEdge>();
+    private static class VertexRecord<E extends HalfEdge> {
+        final List<E> outgoing = new ArrayList<E>();
+        final List<E> incoming = new ArrayList<E>();
         Integer component;
     }
 
-    private static class MinAngleFinder  {
+    private static class MinAngleFinder<E extends HalfEdge>  {
         /**
          * Creates a vector from an HalfEdge, starting at the specified point
          * @param base
          * @param point
          * @return
          */
-        private Point mkVector(HalfEdge base, Point point) {
+        private Point mkVector(E base, Point point) {
             if (getFirstPoint(base).equals(point)) {
                 return subtract(getSecondPoint(base), getFirstPoint(base));
             } else {
@@ -270,26 +270,26 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             }
         }
 
-        private Point getLastPoint(HalfEdge he) {
+        private Point getLastPoint(E he) {
             return he.getGeometry().getPointN(he.getGeometry().getNumPoints() - 1);
         }
 
-        private Point getBeforeLastPoint(HalfEdge he) {
+        private Point getBeforeLastPoint(E he) {
             return he.getGeometry().getPointN(he.getGeometry().getNumPoints() - 2);
         }
 
-        private Point getFirstPoint(HalfEdge he) {
+        private Point getFirstPoint(E he) {
             return he.getGeometry().getPointN(0);
         }
 
-        private Point getSecondPoint(HalfEdge he) {
+        private Point getSecondPoint(E he) {
             return he.getGeometry().getPointN(1);
         }
 
 
 
 
-        public HalfEdge minAngleFromBase(Point origin, HalfEdge base, HalfEdge e1, HalfEdge e2) {
+        public HalfEdge minAngleFromBase(Point origin, E base, E e1, E e2) {
             Point p0 = mkVector(base, origin);
             Point p1 = mkVector(e1, origin);
             Point p2 = mkVector(e2, origin);

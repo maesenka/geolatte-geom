@@ -27,7 +27,7 @@ import java.util.List;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 1/3/13
  */
-public interface OutgoingEdgesFinder {
+public interface OutgoingEdgesFinder<V extends Vertex, E extends HalfEdge, F extends Face> {
 
-    public List<HalfEdge> getOutgoing(Vertex v, List<HalfEdge> resultList);
+    public List<E> getOutgoing(V v, List<E> resultList);
 }

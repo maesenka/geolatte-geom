@@ -71,7 +71,7 @@ public class TestSimpleDCEL {
 
     Map<String, THalfEdge> heMap = new HashMap<String, THalfEdge>();
 
-    Dcel dcel;
+    Dcel<TVertex, THalfEdge, TFace> dcel;
 
     @Before
     public void setUp() {
@@ -101,7 +101,7 @@ public class TestSimpleDCEL {
         //TODO -- add the interior and unconnected face edges.
 
 
-        EdgeByEdgeDcelBuilder builder = new EdgeByEdgeDcelBuilder(new Envelope(0, 0, 100, 100), f0);
+        EdgeByEdgeDcelBuilder<TVertex, THalfEdge, TFace> builder = new EdgeByEdgeDcelBuilder<TVertex, THalfEdge, TFace>(new Envelope(0, 0, 100, 100), f0);
         for (THalfEdge he : heMap.values()) {
             builder.addHalfEdge(he.getOrigin(), he.getDestination(), he.getLeftFace(), he);
         }
@@ -113,7 +113,7 @@ public class TestSimpleDCEL {
     @Test
     public void testOutgoingEdges() {
         DefaultOutgoingEdgesFinder finder = new DefaultOutgoingEdgesFinder(dcel);
-        List<HalfEdge> outgoing = finder.getOutgoing(v0500, null);
+        List<THalfEdge> outgoing = finder.getOutgoing(v0500, null);
         assertEquals(4, outgoing.size());
         assertTrue(outgoing.contains(heMap.get("e1.2")));
         assertTrue(outgoing.contains(heMap.get("e2.1")));
@@ -149,16 +149,16 @@ public class TestSimpleDCEL {
 
     @Test
     public void testFaceNextPreviousLinks() {
-        Collection<HalfEdge> components = dcel.getInnerComponents(f0);
+        Collection<THalfEdge> components = dcel.getInnerComponents(f0);
         assertEquals(1, components.size());
 
 
         //assert that the e1.next.prev == e1 for each face
-        for (Face f : dcel.getFaces()) {
+        for (TFace f : dcel.getFaces()) {
             if(f.isUnboundedFace()) continue;
-            HalfEdge start  = dcel.getOuterComponent(f);
-            HalfEdge current = start;
-            HalfEdge next = dcel.getNext(current);
+            THalfEdge start  = dcel.getOuterComponent(f);
+            THalfEdge current = start;
+            THalfEdge next = dcel.getNext(current);
             do {
                 assertEquals(current, dcel.getPrevious(next));
                 current = next;
@@ -169,10 +169,10 @@ public class TestSimpleDCEL {
 
     @Test
     public void testBoundariesForFace1() {
-        Set<HalfEdge> foundEdges = new HashSet<HalfEdge>();
-        HalfEdge start = dcel.getOuterComponent(f1);
+        Set<THalfEdge> foundEdges = new HashSet<THalfEdge>();
+        THalfEdge start = dcel.getOuterComponent(f1);
         foundEdges.add(start);
-        HalfEdge next = dcel.getNext(start);
+        THalfEdge next = dcel.getNext(start);
         do {
             foundEdges.add(next);
             next = dcel.getNext(next);
