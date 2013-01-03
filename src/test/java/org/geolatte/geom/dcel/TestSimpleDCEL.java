@@ -149,20 +149,20 @@ public class TestSimpleDCEL {
 
     @Test
     public void testFaceNextPreviousLinks() {
-        Collection<HalfEdge> components = dcel.getFaces().getInnerComponents(f0);
+        Collection<HalfEdge> components = dcel.getInnerComponents(f0);
         assertEquals(1, components.size());
 
 
         //assert that the e1.next.prev == e1 for each face
         for (Face f : dcel.getFaces()) {
             if(f.isUnboundedFace()) continue;
-            HalfEdge start  = dcel.getFaces().getOuterComponent(f);
+            HalfEdge start  = dcel.getOuterComponent(f);
             HalfEdge current = start;
-            HalfEdge next = dcel.getHalfEdges().getNext(current);
+            HalfEdge next = dcel.getNext(current);
             do {
-                assertEquals(current, dcel.getHalfEdges().getPrevious(next));
+                assertEquals(current, dcel.getPrevious(next));
                 current = next;
-                next = dcel.getHalfEdges().getNext(current);
+                next = dcel.getNext(current);
             }while (!next.equals(start));
         }
     }
@@ -170,12 +170,12 @@ public class TestSimpleDCEL {
     @Test
     public void testBoundariesForFace1() {
         Set<HalfEdge> foundEdges = new HashSet<HalfEdge>();
-        HalfEdge start = dcel.getFaces().getOuterComponent(f1);
+        HalfEdge start = dcel.getOuterComponent(f1);
         foundEdges.add(start);
-        HalfEdge next = dcel.getHalfEdges().getNext(start);
+        HalfEdge next = dcel.getNext(start);
         do {
             foundEdges.add(next);
-            next = dcel.getHalfEdges().getNext(next);
+            next = dcel.getNext(next);
         }while (!next.equals(start));
 
         assertEquals(6, foundEdges.size());

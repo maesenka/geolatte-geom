@@ -47,13 +47,13 @@ public class DefaultOutgoingEdgesFinder implements OutgoingEdgesFinder {
         } else {
             resultList.clear();
         }
-        HalfEdge e = dcel.getVertices().getIncidentEdge(v);
+        HalfEdge e = dcel.getIncidentEdge(v);
 
         while (!visitedHalfEdges.contains(e)){
             visitedHalfEdges.add(e);
             resultList.add(e);
-            HalfEdge eTwin = dcel.getHalfEdges().getTwin(e);
-            e = dcel.getHalfEdges().getNext(eTwin);
+            HalfEdge eTwin = dcel.getTwin(e);
+            e = dcel.getNext(eTwin);
         }
         return resultList;
     }

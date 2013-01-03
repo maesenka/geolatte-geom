@@ -23,10 +23,7 @@ package org.geolatte.geom.subdivision;
 
 import org.geolatte.geom.Envelope;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Karel Maesen, Geovise BVBA
@@ -49,20 +46,7 @@ class SimpleDcel implements Dcel {
         this.faces = faces;
     }
 
-    @Override
-    public VertexList getVertices() {
-        return vertices;
-    }
 
-    @Override
-    public FaceList getFaces() {
-        return faces;
-    }
-
-    @Override
-    public HalfEdgeList getHalfEdges() {
-        return halfEdges;
-    }
 
     @Override
     public Face getUnboundedFace() {
@@ -70,18 +54,73 @@ class SimpleDcel implements Dcel {
     }
 
     @Override
+    public Set<Face> getFaces() {
+        return this.faces.toSet();
+    }
+
+    @Override
+    public Set<HalfEdge> getHalfEdges() {
+        return this.halfEdges.toSet();
+    }
+
+    @Override
+    public Set<Vertex> getVertices() {
+        return this.vertices.toSet();
+    }
+
+    @Override
     public Envelope getEnvelope() {
         return this.envelope;
     }
 
-    static class SimpleVertexList implements VertexList{
+    @Override
+    public HalfEdge getIncidentEdge(Vertex vertex) {
+        return vertices.getIncidentEdge(vertex);
+    }
+
+    @Override
+    public HalfEdge getOuterComponent(Face face) {
+        return faces.getOuterComponent(face);
+    }
+
+    @Override
+    public Collection<HalfEdge> getInnerComponents(Face face) {
+        return faces.getInnerComponents(face);
+    }
+
+    @Override
+    public Vertex getOrigin(HalfEdge he) {
+        return halfEdges.getOrigin(he);
+    }
+
+    @Override
+    public HalfEdge getTwin(HalfEdge he) {
+        return halfEdges.getTwin(he);
+    }
+
+    @Override
+    public Face getIncidentFace(HalfEdge he) {
+        return halfEdges.getIncidentFace(he);
+    }
+
+    @Override
+    public HalfEdge getNext(HalfEdge he) {
+        return halfEdges.getNext(he);
+    }
+
+    @Override
+    public HalfEdge getPrevious(HalfEdge he) {
+        return halfEdges.getPrevious(he);
+    }
+
+    static class SimpleVertexList {
         final private Map<Vertex, HalfEdge> vertices;
 
         SimpleVertexList(Map<Vertex, HalfEdge> vertices){
             this.vertices = vertices;
         }
 
-        @Override
+
         public HalfEdge getIncidentEdge(Vertex vertex) {
             HalfEdge result =  vertices.get(vertex);
             if (result == null) {
@@ -90,13 +129,12 @@ class SimpleDcel implements Dcel {
             return result;
         }
 
-        @Override
-        public Iterator<Vertex> iterator() {
-            return vertices.keySet().iterator();
+        public Set<Vertex> toSet() {
+            return vertices.keySet();
         }
     }
 
-    static class SimpleFaceList implements FaceList{
+    static class SimpleFaceList {
 
         final private Map<Face,HalfEdge> outerComponentMap;
         final private Map<Face, List<HalfEdge>> innerComponentsMap;
@@ -108,7 +146,7 @@ class SimpleDcel implements Dcel {
             this.unboundedFace = unboundedFace;
         }
 
-        @Override
+
         public HalfEdge getOuterComponent(Face face) {
             HalfEdge result = outerComponentMap.get(face);
 //            if (result == null) {
@@ -117,7 +155,6 @@ class SimpleDcel implements Dcel {
             return result;
         }
 
-        @Override
         public Collection<HalfEdge> getInnerComponents(Face face) {
             List<HalfEdge> result = innerComponentsMap.get(face);
 //            if (result == null) {
@@ -130,13 +167,12 @@ class SimpleDcel implements Dcel {
             return unboundedFace;
         }
 
-        @Override
-        public Iterator<Face> iterator() {
-            return outerComponentMap.keySet().iterator();
+        public Set<Face> toSet() {
+            return outerComponentMap.keySet();
         }
     }
 
-    static class SimpleHalfEdgeList implements HalfEdgeList{
+    static class SimpleHalfEdgeList {
 
         final private Map<HalfEdge, HalfEdgeRecord> halfEdgeRecordMap;
 
@@ -152,34 +188,34 @@ class SimpleDcel implements Dcel {
             return record;
         }
 
-        @Override
+
         public Vertex getOrigin(HalfEdge he) {
             return getRecord(he).origin;
         }
 
-        @Override
+
         public HalfEdge getTwin(HalfEdge he) {
             return getRecord(he).twin;
         }
 
-        @Override
+
         public Face getIncidentFace(HalfEdge he) {
             return getRecord(he).incidentFace;
         }
 
-        @Override
+
         public HalfEdge getNext(HalfEdge he) {
             return getRecord(he).next;
         }
 
-        @Override
+
         public HalfEdge getPrevious(HalfEdge he) {
             return getRecord(he).prev;
         }
 
-        @Override
-        public Iterator<HalfEdge> iterator() {
-            return halfEdgeRecordMap.keySet().iterator();
+
+        public Set<HalfEdge> toSet() {
+            return halfEdgeRecordMap.keySet();
         }
     }
 
