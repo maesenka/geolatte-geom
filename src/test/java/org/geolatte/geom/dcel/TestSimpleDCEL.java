@@ -22,10 +22,7 @@
 package org.geolatte.geom.dcel;
 
 import org.geolatte.geom.Envelope;
-import org.geolatte.geom.subdivision.Dcel;
-import org.geolatte.geom.subdivision.DefaultOutgoingEdgesFinder;
-import org.geolatte.geom.subdivision.EdgeByEdgeDcelBuilder;
-import org.geolatte.geom.subdivision.HalfEdge;
+import org.geolatte.geom.subdivision.*;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -81,28 +78,28 @@ public class TestSimpleDCEL {
 
     @Before
     public void setUp() {
-        heMap.put("e1.1", halfedge(1,  v0000, v0500, f1, f0));
-        heMap.put("e1.2", halfedge(2, v0500, v0000, f0, f1));
-        heMap.put("e2.1", halfedge(3, v0500, v0510, f1, f2));
-        heMap.put("e2.2", halfedge(4, v0510, v0500, f2, f1));
-        heMap.put("e3.1", halfedge(5, v0510, v0010, f1, f0));
-        heMap.put("e3.2", halfedge(6, v0010, v0510, f0, f1));
-        heMap.put("e4.1", halfedge(7, v0010, v0000, f1, f0));
-        heMap.put("e4.2", halfedge(8, v0000, v0010, f0, f1));
-        heMap.put("e5.1", halfedge(9, v0010, v0208, f1, f1));
-        heMap.put("e5.2", halfedge(10, v0208, v0010, f1, f1));
-        heMap.put("e6.1", halfedge(11, v0500, v1000, f3, f0));
-        heMap.put("e6.2", halfedge(12, v1000, v0500, f0, f3));
-        heMap.put("e7.1", halfedge(13, v1000, v1010, f3, f0));
-        heMap.put("e7.2", halfedge(14, v1010, v1000, f0, f3));
-        heMap.put("e8.1", halfedge(15, v0500, v1010, f2, f3));
-        heMap.put("e8.2", halfedge(16, v1010, v0500, f3, f2));
-        heMap.put("e9.1", halfedge(17, v1010, v0810, f2, f0));
-        heMap.put("e9.2", halfedge(18, v0810, v1010, f0, f2));
-        heMap.put("e10.1", halfedge(19, v0810, v0510, f2, f0));
-        heMap.put("e10.2", halfedge(20, v0510, v0810, f0, f2));
-        heMap.put("e11.1", halfedge(21, v0810, v0812, f0, f0));
-        heMap.put("e11.2", halfedge(22, v0812, v0810, f0, f0));
+        heMap.put("e1.1", halfedge("e1.1",  v0000, v0500, f1, f0));
+        heMap.put("e1.2", halfedge("e1.2", v0500, v0000, f0, f1));
+        heMap.put("e2.1", halfedge("e2.1", v0500, v0510, f1, f2));
+        heMap.put("e2.2", halfedge("e.2.2", v0510, v0500, f2, f1));
+        heMap.put("e3.1", halfedge("e3.1", v0510, v0010, f1, f0));
+        heMap.put("e3.2", halfedge("e3.2", v0010, v0510, f0, f1));
+        heMap.put("e4.1", halfedge("e4.1", v0010, v0000, f1, f0));
+        heMap.put("e4.2", halfedge("e4.2", v0000, v0010, f0, f1));
+        heMap.put("e5.1", halfedge("e5.1", v0010, v0208, f1, f1));
+        heMap.put("e5.2", halfedge("e5.2", v0208, v0010, f1, f1));
+        heMap.put("e6.1", halfedge("e6.1", v0500, v1000, f3, f0));
+        heMap.put("e6.2", halfedge("e6.2", v1000, v0500, f0, f3));
+        heMap.put("e7.1", halfedge("e7.1", v1000, v1010, f3, f0));
+        heMap.put("e7.2", halfedge("e7.2", v1010, v1000, f0, f3));
+        heMap.put("e8.1", halfedge("e8.1", v0500, v1010, f2, f3));
+        heMap.put("e8.2", halfedge("e8.2", v1010, v0500, f3, f2));
+        heMap.put("e9.1", halfedge("e9.1", v1010, v0810, f2, f0));
+        heMap.put("e9.2", halfedge("e9.2", v0810, v1010, f0, f2));
+        heMap.put("e10.1", halfedge("e10.1", v0810, v0510, f2, f0));
+        heMap.put("e10.2", halfedge("e10.2", v0510, v0810, f0, f2));
+        heMap.put("e11.1", halfedge("e11.1", v0810, v0812, f0, f0));
+        heMap.put("e11.2", halfedge("e11.2", v0812, v0810, f0, f0));
 
         //TODO -- add the interior and unconnected face edges.
 
@@ -137,16 +134,40 @@ public class TestSimpleDCEL {
         assertTrue(outgoing.contains(heMap.get("e9.1")));
     }
 
+    @Test
+    public void testUnboundedFace() {
+        assertEquals(f0, dcel.getUnboundedFace());
+
+        boolean found = false;
+        for (Face f: dcel.getFaces()){
+            if( f.isUnboundedFace()) {
+                assertEquals(f0, f);
+                found = true;
+            }
+        }
+        assertTrue(found);
+    }
+
+
 
     @Test
-    public void testConstruction() {
-
+    public void testFaceNextPreviousLinks() {
         Collection<HalfEdge> components = dcel.getFaces().getInnerComponents(f0);
         assertEquals(1, components.size());
 
-        //assert that the e1.next.prev == e1
-        dcel.getFaces().getInnerComponents(f0);
 
+        //assert that the e1.next.prev == e1 for each face
+        for (Face f : dcel.getFaces()) {
+            if(f.isUnboundedFace()) continue;
+            HalfEdge start  = dcel.getFaces().getOuterComponent(f);
+            HalfEdge current = start;
+            HalfEdge next = dcel.getHalfEdges().getNext(current);
+            do {
+                assertEquals(current, dcel.getHalfEdges().getPrevious(next));
+                current = next;
+                next = dcel.getHalfEdges().getNext(current);
+            }while (!next.equals(start));
+        }
 
 
     }

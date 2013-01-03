@@ -29,7 +29,7 @@ import java.util.Collection;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public interface FaceList {
+public interface FaceList extends Iterable<Face> {
 
     public HalfEdge getOuterComponent(Face face);
 

@@ -25,7 +25,7 @@ package org.geolatte.geom.subdivision;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public interface VertexList {
+public interface VertexList extends Iterable<Vertex>{
 
     public HalfEdge getIncidentEdge(Vertex vertex);
 

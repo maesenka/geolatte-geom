@@ -21,12 +21,9 @@
 
 package org.geolatte.geom.subdivision;
 
-import org.geolatte.geom.*;
+import org.geolatte.geom.Envelope;
 
 import java.util.*;
-
-import static org.geolatte.geom.Vector.angle;
-import static org.geolatte.geom.Vector.subtract;
 
 /**
  * A {@DcelBuilder} that builds up the DCEL by adding edges.
@@ -38,279 +35,198 @@ import static org.geolatte.geom.Vector.subtract;
  */
 public class EdgeByEdgeDcelBuilder implements DcelBuilder {
 
-    final private GeometryPointEquality pointEquality = new GeometryPointEquality(new ExactCoordinatePointEquality(DimensionalFlag.d2D));
-    final private Envelope extent;
-    final private Face unboundedFace;
-    final Map<Face, List<HalfEdgeWrapper>> faceHalfEdgeMap = new HashMap<Face, List<HalfEdgeWrapper>>();
-    final Map<Vertex, VertexWrapper> vertices = new HashMap<Vertex, VertexWrapper>();
-
-    private Map<HalfEdge, SimpleDcel.HalfEdgeRecord> halfEdgeMap;
-    private Map<Face, HalfEdge> outerCompMap;
-    private Set<Face> currentConnectComponentSet = new HashSet<Face>();
-    private Set<Face> containingFaceCandidateSet = new HashSet<Face>();
+    final private Envelope envelope;
+    final private Face unbounded;
 
 
-    public EdgeByEdgeDcelBuilder(Envelope extent, Face unbounded){
-        this.extent = extent;
-        if (!unbounded.isUnboundedFace()) {
-            throw new IllegalArgumentException("Require unbounded face as parameter.");
-        }
-        this.unboundedFace = unbounded;
+    //status information on the build state
+    final private VertexRecordList vertexRecordList = new VertexRecordList();
+    final Map<HalfEdge, SimpleDcel.HalfEdgeRecord> halfEdgeRecordMap = new HashMap<HalfEdge, SimpleDcel.HalfEdgeRecord>();
+    final private Map<Face, HalfEdge> outerComponentMap = new HashMap<Face, HalfEdge>();
+    private int componentCounter = 0;
 
-   }
+    public EdgeByEdgeDcelBuilder(Envelope envelope, Face unbounded) {
+        this.envelope = envelope;
+        this.unbounded = unbounded;
+        outerComponentMap.put(unbounded, null);
+    }
 
-    /**
-     * Adds an edge between origin and destination {@code Vertex}es.
-     * <p/>
-     * <p>The edge will be translated into twin {@HalfEdge}s.</p>
-     *
-     * @param origin      origin or start vertex
-     * @param destination destination or end vertex
-     * @param leftFace    the face incident and to the left of this edge
-     * @throws IllegalArgumentException when any of its arguments is null, or when origin and destination are coincident
-     */
     public void addHalfEdge(Vertex origin, Vertex destination, Face leftFace, HalfEdge halfEdge) {
-        if (origin == null || destination == null || leftFace == null
-                || halfEdge == null) {
-            throw new IllegalArgumentException("No null parameters are allowed.");
-        }
-        if (origin.equals(destination) || pointEquality.equals(origin.getPoint(), destination.getPoint())) {
-            throw new IllegalArgumentException("Tried to add edge with coincident origin and destination vertices.");
-        }
-
-        VertexWrapper vwOrigin = getVertexWrapper(origin);
-        VertexWrapper vwDest = getVertexWrapper(destination);
-        HalfEdgeWrapper wrapper = new HalfEdgeWrapper(halfEdge, vwOrigin, vwDest, leftFace);
-        addToFaceHalfEdgeMap(leftFace, wrapper);
-        vwOrigin.addOutGoing(wrapper);
+        VertexRecord originRecord = vertexRecordList.getVertexRecord(origin);
+        VertexRecord destRecord = vertexRecordList.getVertexRecord(destination);
+        updateVertexRecords(originRecord, destRecord, halfEdge);
+        setOuterComponent(leftFace, halfEdge);
+        updateHalfEdgeRecordMap(origin, destination, leftFace, halfEdge, originRecord, destRecord);
     }
 
-    private VertexWrapper getVertexWrapper(Vertex destination) {
-        VertexWrapper vwDest = vertices.get(destination);
-        if (vwDest == null) {
-            vwDest = new VertexWrapper(destination);
-            vertices.put(destination, vwDest);
+
+    private void updateHalfEdgeRecordMap(Vertex origin, Vertex destination, Face leftFace, HalfEdge halfEdge, VertexRecord originRecord, VertexRecord destRecord) {
+        SimpleDcel.HalfEdgeRecord currentRecord = new SimpleDcel.HalfEdgeRecord();
+        currentRecord.setOrigin(origin);
+        currentRecord.setIncidentFace(leftFace);
+        halfEdgeRecordMap.put(halfEdge, currentRecord);
+        //set next/prev at origin
+        for(HalfEdge candidate: originRecord.incoming) {
+            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+            if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
+                candidateRecord.setNext(halfEdge);
+                currentRecord.setPrev(candidate);
+            }
         }
-        return vwDest;
+        //set next/prev at destination
+        for(HalfEdge candidate: destRecord.outgoing) {
+            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+            if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
+                currentRecord.setNext(candidate);
+                candidateRecord.setPrev(halfEdge);
+            }
+        }
+        //set twin
+        for (HalfEdge candidate: destRecord.outgoing) {
+            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+            if (candidateRecord.getOrigin().equals(origin)) {
+                candidateRecord.setTwin(halfEdge);
+                currentRecord.setTwin(candidate);
+                break;
+            }
+        }
+        for (HalfEdge candidate: originRecord.incoming) {
+            SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
+            if (candidateRecord.getOrigin().equals(destination)) {
+                candidateRecord.setTwin(halfEdge);
+                currentRecord.setTwin(candidate);
+                break;
+            }
+        }
+
     }
 
+    private void setOuterComponent(Face leftFace, HalfEdge halfEdge) {
+        if (leftFace.isUnboundedFace()) {
+            return;
+        }
+        outerComponentMap.put(leftFace, halfEdge);
+    }
 
     /**
-     * Adds the halfedge in FaceHalfEdgeMap
-     * <p/>
-     * <p>This method respects the invariants that the HalfEdges in the list (value) have the face (key) as
-     * left incident face.</p>
-     *
-     * @param face
-     * @param halfEdgeWrapper
+     * Add vertices to the vertexRecordList and register the HalfEdge as incoming, resp. outgoing.
      */
-    private void addToFaceHalfEdgeMap(Face face, HalfEdgeWrapper halfEdgeWrapper) {
-        List<HalfEdgeWrapper> list = faceHalfEdgeMap.get(face);
-        if (list == null) {
-            list = new LinkedList<HalfEdgeWrapper>();
-            faceHalfEdgeMap.put(face, list);
+    private void updateVertexRecords(VertexRecord originRecord, VertexRecord destRecord, HalfEdge halfEdge) {
+
+
+        if (isNewVertex(originRecord) && isNewVertex(destRecord)) {
+            Integer comp = componentCounter++;
+            originRecord.component = comp;
+            destRecord.component = comp;
+        } else if (isNewVertex(originRecord)){
+            assert(destRecord.component != null);
+            originRecord.component = destRecord.component;
+        } else if (isNewVertex(destRecord)) {
+            assert (originRecord.component != null);
+            destRecord.component = originRecord.component;
+        } else { //neither are new
+            assert (originRecord.component != null);
+            assert(destRecord.component != null);
+            vertexRecordList.relabelComponents(originRecord.component, destRecord.component);
         }
-        list.add(halfEdgeWrapper);
+        originRecord.outgoing.add(halfEdge);
+        destRecord.incoming.add(halfEdge);
+    }
+
+    private boolean isNewVertex(VertexRecord vertexRecord) {
+        return vertexRecord.outgoing.isEmpty() && vertexRecord.incoming.isEmpty();
     }
 
     @Override
     public Dcel toDcel() {
-
-        halfEdgeMap = createHalfEdgeMap();
-        Map<Vertex, HalfEdge> vertexHalfEdgeMap = toSimpleVertexList();
-        outerCompMap = toOuterCompMap();
-        Map<Face, List<HalfEdge>> innerCompMap = toInnerCompMap();
-
-        return new SimpleDcel(extent,
-                new SimpleDcel.SimpleVertexList(vertexHalfEdgeMap),
-                new SimpleDcel.SimpleHalfEdgeList(halfEdgeMap),
-                new SimpleDcel.SimpleFaceList(outerCompMap, innerCompMap, unboundedFace)
-        );
+        return new SimpleDcel(this.envelope,
+                mkSimpleVertexList(), mkSimpleEdgeList(),
+                toSimpleFaceList());
     }
 
-    // methods that calculate the data structures neccessary for constructing a SimpleDcel instance.
-
-    /**
-     * Determines the innercomponents by performing a depth-first traversal of the graph
-     * and in each step adding the left incident face to the currentConnectComponentSet and removing it from
-     * the containingFaceCandidateSet (if present), and adding the right incident face to the containingFaceCandidateSet.
-     *
-     * @return
-     */
-    private Map<Face, List<HalfEdge>> toInnerCompMap() {
-        Map<Face, List<HalfEdge>> result = new HashMap<Face, List<HalfEdge>>();
-        for (VertexWrapper vw : vertices.values()) {
-            if (vw.visited) {
+    private SimpleDcel.SimpleFaceList toSimpleFaceList() {
+        Map<Face, List<HalfEdge>> innerComps = new HashMap<Face, List<HalfEdge>>();
+        Set<Integer> visitedComponents = new TreeSet<Integer>();
+        for (Map.Entry<Vertex, VertexRecord> entry : vertexRecordList.all()) {
+            Integer currentComponent = entry.getValue().component;
+            if (visitedComponents.contains(currentComponent)) {
                 continue;
             }
-            depthFirstVisit(vw);
-            //if we reach this point, a single connnected component has been determined.
-            assert (containingFaceCandidateSet.size() == 1);
-            Face containingFace = containingFaceCandidateSet.iterator().next();
-            List<HalfEdge> halfEdgeList = result.get(containingFace);
-            if (halfEdgeList == null) {
-                halfEdgeList = new ArrayList<HalfEdge>();
-                result.put(containingFace, halfEdgeList);
-            }
-            Face inner = currentConnectComponentSet.iterator().next();
-            halfEdgeList.add(outerCompMap.get(inner));
-            currentConnectComponentSet.clear();
-            containingFaceCandidateSet.clear();
-        }
-        return result;
-
-    }
-
-    private void depthFirstVisit(VertexWrapper vw) {
-        vw.visited = true;
-        for (HalfEdgeWrapper hew : vw.getOutgoingEdges()) {
-            if (!hew.visited) {
-                Face leftFace = hew.incidentFace;
-                HalfEdge twin = halfEdgeMap.get(hew.halfEdge).twin;
-                Face rightFace = halfEdgeMap.get(twin).incidentFace;
-                currentConnectComponentSet.add(leftFace);
-                containingFaceCandidateSet.remove(leftFace);
-                if (!leftFace.equals(rightFace)) {
-                    containingFaceCandidateSet.add(rightFace);
+            for( HalfEdge outgoing: entry.getValue().outgoing) {
+                Face incidentFace = halfEdgeRecordMap.get(outgoing).getIncidentFace();
+                HalfEdge boundary = outerComponentMap.get(incidentFace);
+                if (boundary == null) {
+                    addInnerComponent(innerComps, incidentFace, outgoing);
+                    visitedComponents.add(currentComponent);
+                    break;
+                } else {
+                    SimpleDcel.HalfEdgeRecord boundaryRecord = halfEdgeRecordMap.get(boundary);
+                    VertexRecord vertexRecord = vertexRecordList.getVertexRecord(boundaryRecord.getOrigin());
+                    if (!vertexRecord.component.equals(currentComponent)) {
+                        addInnerComponent(innerComps, incidentFace, outgoing);
+                        visitedComponents.add(currentComponent);
+                        break;
+                    }
                 }
-                hew.visited = true;
-            }
-            if (!hew.destination.visited) {
-                depthFirstVisit(hew.destination);
             }
         }
+        return new SimpleDcel.SimpleFaceList(outerComponentMap, innerComps, unbounded);
     }
 
-    private Map<Face, HalfEdge> toOuterCompMap() {
-        Map<Face, HalfEdge> result = new HashMap<Face, HalfEdge>(faceHalfEdgeMap.size());
-        for ( Map.Entry<Face, List<HalfEdgeWrapper>> entry : faceHalfEdgeMap.entrySet()) {
-            result.put(entry.getKey(), entry.getValue().get(0).halfEdge);
+    private void addInnerComponent(Map<Face, List<HalfEdge>> innerComps, Face outerFace, HalfEdge boundary) {
+        List<HalfEdge> innerEdges = innerComps.get(outerFace);
+        if (innerEdges == null) {
+            innerEdges = new ArrayList<HalfEdge>();
+            innerComps.put(outerFace, innerEdges);
         }
-        return result;
+        innerEdges.add(boundary);
     }
 
-    private Map<Vertex, HalfEdge> toSimpleVertexList() {
-        Map<Vertex,HalfEdge> result = new HashMap<Vertex,HalfEdge>(vertices.size());
-        for (VertexWrapper vw: vertices.values()) {
-            result.put(vw.vertex, vw.getOutgoingEdges().get(0).halfEdge);
+    private SimpleDcel.SimpleHalfEdgeList mkSimpleEdgeList() {
+        return new SimpleDcel.SimpleHalfEdgeList(halfEdgeRecordMap);
+    }
+
+    private SimpleDcel.SimpleVertexList mkSimpleVertexList() {
+
+        Map<Vertex, HalfEdge> verticesMap = new HashMap<Vertex, HalfEdge>();
+        for (Map.Entry<Vertex, VertexRecord> entry : vertexRecordList.all()) {
+            verticesMap.put(entry.getKey(), entry.getValue().outgoing.get(0));
         }
-        return result;
+        return new SimpleDcel.SimpleVertexList(verticesMap);
     }
 
-    /**
-     * Creates a map of HE's and their HE records.
-     * @return
-     */
-    private Map<HalfEdge, SimpleDcel.HalfEdgeRecord> createHalfEdgeMap() {
-        Map<HalfEdge, SimpleDcel.HalfEdgeRecord> halfEdgeMap = new HashMap<HalfEdge, SimpleDcel.HalfEdgeRecord>();
-        for (Face face : faceHalfEdgeMap.keySet()) {
-            List<HalfEdgeWrapper> faceHalfEdges = faceHalfEdgeMap.get(face);
-            for (HalfEdgeWrapper hew : faceHalfEdges) {
-                HalfEdge twin = findTwin(hew);
-                SimpleDcel.HalfEdgeRecord record = new SimpleDcel.HalfEdgeRecord(hew.origin.vertex, twin, hew.incidentFace);
-                record.next = findNext(hew, faceHalfEdges);
-                halfEdgeMap.put(hew.halfEdge, record);
+    private static class VertexRecordList {
 
+        final private Map<Vertex, VertexRecord> vertexRecordMap = new HashMap<Vertex, VertexRecord>();
+
+        VertexRecord getVertexRecord(Vertex v) {
+            VertexRecord record = vertexRecordMap.get(v);
+            if (record == null) {
+                record = new VertexRecord();
+                vertexRecordMap.put(v, record);
             }
-            setPrevPointers(halfEdgeMap, faceHalfEdges.get(0).halfEdge);
+            return record;
         }
-        return halfEdgeMap;
-    }
 
-    private void setPrevPointers(Map<HalfEdge, SimpleDcel.HalfEdgeRecord> halfEdgeMap, HalfEdge startHE) {
-        HalfEdge current = startHE;
-        SimpleDcel.HalfEdgeRecord currentRecord = halfEdgeMap.get(current);
-        SimpleDcel.HalfEdgeRecord nextRecord = halfEdgeMap.get(currentRecord.next);
-        while (nextRecord.prev == null) {
-            nextRecord.prev = current;
-            current = currentRecord.next;
-            currentRecord = nextRecord;
-            nextRecord = halfEdgeMap.get(currentRecord.next);
-        }
-    }
-
-    //finds the next halfEdge for the
-    private HalfEdge findNext(HalfEdgeWrapper hew, List<HalfEdgeWrapper> faceHalfEdges) {
-        List<HalfEdgeWrapper> candidates = new ArrayList<HalfEdgeWrapper>(3);
-        for (HalfEdgeWrapper candidate : faceHalfEdges) {
-            if (hew.destination.equals(candidate.origin)) {
-                candidates.add(candidate);
+        public void relabelComponents(Integer newComponent, Integer oldComponent) {
+            for (VertexRecord record : vertexRecordMap.values()) {
+                if (oldComponent.equals(record.component)) {
+                    record.component = newComponent;
+                }
             }
         }
-        Collections.sort(candidates, new EdgeComparator(hew));
-        return candidates.get(0).halfEdge;
-    }
 
-    //finds the twin of this HalfEdge
-    private HalfEdge findTwin(HalfEdgeWrapper wrapper) {
-        for (HalfEdgeWrapper candidate : vertices.get(wrapper.destination.vertex).outgoingEdges){
-            if (candidate.destination.equals(wrapper.origin)) return candidate.halfEdge;
-        }
-        throw new IllegalStateException("Couldn't find a twin for half-edge " + wrapper.halfEdge);
-    }
-
-    /**
-     * A Comparator for edges based on their angle w.r.t. a base vector
-     */
-    private static class EdgeComparator implements Comparator<HalfEdgeWrapper> {
-         private Point p0;
-         EdgeComparator(HalfEdgeWrapper  base) {
-             p0 = subtract(base.origin.getPoint(), base.destination.getPoint());
-         }
-
-        @Override
-        public int compare(HalfEdgeWrapper o1, HalfEdgeWrapper o2) {
-            Point p1 = subtract(o1.destination.getPoint(), o1.origin.getPoint());
-            Point p2 = subtract(o2.destination.getPoint(), o2.origin.getPoint());
-            return Double.compare(angle(p1, p0), angle(p2, p0));
-        }
-    }
-
-    /**
-     * Wraps the vertex and maintains state information during the construction of the DCEL
-     */
-    private static class VertexWrapper {
-        final List<HalfEdgeWrapper> outgoingEdges = new ArrayList<HalfEdgeWrapper>(4);
-        final Vertex vertex;
-        boolean visited = false;
-
-        VertexWrapper(Vertex vertex) {
-            this.vertex = vertex;
-        }
-
-        void addOutGoing(HalfEdgeWrapper he) {
-            outgoingEdges.add(he);
-        }
-
-        List<HalfEdgeWrapper> getOutgoingEdges() {
-            return this.outgoingEdges;
-        }
-
-        Point getPoint() {
-            return this.vertex.getPoint();
-        }
-
-    }
-
-    /**
-     * Wraps the HalfEdge and maintains state information during the construction of the DCEL
-     */
-    private static class HalfEdgeWrapper {
-        final HalfEdge halfEdge;
-        final VertexWrapper origin;
-        final VertexWrapper destination;
-        final Face incidentFace;
-        boolean visited = false;
-
-        HalfEdgeWrapper(HalfEdge halfEdge, VertexWrapper origin, VertexWrapper destination, Face incidentFace) {
-            this.halfEdge = halfEdge;
-            this.origin = origin;
-            this.destination = destination;
-            this.incidentFace = incidentFace;
+        public Set<Map.Entry<Vertex, VertexRecord>> all() {
+            return this.vertexRecordMap.entrySet();
         }
 
 
     }
 
+    private static class VertexRecord {
+        final List<HalfEdge> outgoing = new ArrayList<HalfEdge>();
+        final List<HalfEdge> incoming = new ArrayList<HalfEdge>();
+        Integer component;
+    }
 }
 

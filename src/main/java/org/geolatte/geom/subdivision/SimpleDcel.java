@@ -24,6 +24,7 @@ package org.geolatte.geom.subdivision;
 import org.geolatte.geom.Envelope;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +89,11 @@ class SimpleDcel implements Dcel {
             }
             return result;
         }
+
+        @Override
+        public Iterator<Vertex> iterator() {
+            return vertices.keySet().iterator();
+        }
     }
 
     static class SimpleFaceList implements FaceList{
@@ -105,9 +111,9 @@ class SimpleDcel implements Dcel {
         @Override
         public HalfEdge getOuterComponent(Face face) {
             HalfEdge result = outerComponentMap.get(face);
-            if (result == null) {
-                throw new IllegalStateException("Face " + face + " is not an element of the DCEL.");
-            }
+//            if (result == null) {
+//                throw new IllegalStateException("Face " + face + " is not an element of the DCEL.");
+//            } -- null returned for the unboundedface
             return result;
         }
 
@@ -123,9 +129,14 @@ class SimpleDcel implements Dcel {
         Face getUnboundedFace() {
             return unboundedFace;
         }
+
+        @Override
+        public Iterator<Face> iterator() {
+            return outerComponentMap.keySet().iterator();
+        }
     }
 
-    static class SimpleHalfEdgeList  implements HalfEdgeList{
+    static class SimpleHalfEdgeList implements HalfEdgeList{
 
         final private Map<HalfEdge, HalfEdgeRecord> halfEdgeRecordMap;
 
@@ -166,27 +177,57 @@ class SimpleDcel implements Dcel {
             return getRecord(he).prev;
         }
 
+        @Override
+        public Iterator<HalfEdge> iterator() {
+            return halfEdgeRecordMap.keySet().iterator();
+        }
     }
 
     static class HalfEdgeRecord {
-        final Vertex origin;
-        final HalfEdge twin;
-        final Face incidentFace;
-        HalfEdge next;
-        HalfEdge prev;
+        private Vertex origin;
+        private HalfEdge twin;
+        private Face incidentFace;
+        private HalfEdge next;
+        private HalfEdge prev;
 
-        HalfEdgeRecord(Vertex origin, HalfEdge twin, Face incidentFace) {
+        public Vertex getOrigin() {
+            return origin;
+        }
+
+        public void setOrigin(Vertex origin) {
             this.origin = origin;
+        }
+
+        public HalfEdge getTwin() {
+            return twin;
+        }
+
+        public void setTwin(HalfEdge twin) {
             this.twin = twin;
+        }
+
+        public Face getIncidentFace() {
+            return incidentFace;
+        }
+
+        public void setIncidentFace(Face incidentFace) {
             this.incidentFace = incidentFace;
         }
 
-        void setNext(HalfEdge he) {
-            this.next = he;
+        public HalfEdge getNext() {
+            return next;
         }
 
-        void setPrev(HalfEdge he){
-            this.prev = he;
+        public void setNext(HalfEdge next) {
+            this.next = next;
+        }
+
+        public HalfEdge getPrev() {
+            return prev;
+        }
+
+        public void setPrev(HalfEdge prev) {
+            this.prev = prev;
         }
     }
 

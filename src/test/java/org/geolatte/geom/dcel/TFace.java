@@ -50,4 +50,9 @@ public class TFace implements Face {
     public int getId() {
         return id;
     }
+
+    @Override
+    public String toString() {
+        return Integer.toString(id);
+    }
 }

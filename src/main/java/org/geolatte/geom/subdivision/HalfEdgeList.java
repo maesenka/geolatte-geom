@@ -25,7 +25,7 @@ package org.geolatte.geom.subdivision;
  * @author Karel Maesen, Geovise BVBA
  *         creation-date: 12/27/12
  */
-public interface HalfEdgeList {
+public interface HalfEdgeList extends Iterable<HalfEdge> {
 
     /**
      * Get the origin {@code Vertex} for the specified {@code HalfEdge}

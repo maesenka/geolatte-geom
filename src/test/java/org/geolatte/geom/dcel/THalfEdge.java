@@ -34,17 +34,17 @@ import static org.geolatte.geom.builder.DSL.*;
 public class THalfEdge implements HalfEdge {
 
     final private LineString geometry;
-    final private int id;
+    final private String id;
     final private TFace leftFace;
     final private TFace rightFace;
     final private TVertex origin;
     final private TVertex destination;
 
-    public static THalfEdge halfedge(int id, TVertex o, TVertex d, TFace leftFace, TFace rightFace) {
+    public static THalfEdge halfedge(String id, TVertex o, TVertex d, TFace leftFace, TFace rightFace) {
         return new THalfEdge(id, o, d, leftFace, rightFace);
     }
 
-    public THalfEdge(int id, TVertex o, TVertex d, TFace leftFace, TFace rightFace) {
+    public THalfEdge(String id, TVertex o, TVertex d, TFace leftFace, TFace rightFace) {
         Point start = o.getPoint();
         Point end = o.getPoint();
         geometry = linestring(0, c(start.getX(), start.getY()), c(end.getX(), end.getY()));
@@ -60,7 +60,7 @@ public class THalfEdge implements HalfEdge {
         return this.geometry;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
@@ -81,6 +81,6 @@ public class THalfEdge implements HalfEdge {
     }
 
     public String toString() {
-        return Integer.toString(id);
+        return id;
     }
 }
