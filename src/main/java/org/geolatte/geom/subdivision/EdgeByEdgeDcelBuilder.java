@@ -22,8 +22,11 @@
 package org.geolatte.geom.subdivision;
 
 import org.geolatte.geom.Envelope;
+import org.geolatte.geom.Point;
 
 import java.util.*;
+
+import static org.geolatte.geom.Vector.*;
 
 /**
  * A {@DcelBuilder} that builds up the DCEL by adding edges.
@@ -38,6 +41,7 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
     final private Envelope envelope;
     final private Face unbounded;
 
+    final private MinAngleFinder minAngleFinder = new MinAngleFinder();
 
     //status information on the build state
     final private VertexRecordList vertexRecordList = new VertexRecordList();
@@ -61,24 +65,46 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
 
 
     private void updateHalfEdgeRecordMap(Vertex origin, Vertex destination, Face leftFace, HalfEdge halfEdge, VertexRecord originRecord, VertexRecord destRecord) {
-        SimpleDcel.HalfEdgeRecord currentRecord = new SimpleDcel.HalfEdgeRecord();
-        currentRecord.setOrigin(origin);
-        currentRecord.setIncidentFace(leftFace);
-        halfEdgeRecordMap.put(halfEdge, currentRecord);
-        //set next/prev at origin
+        SimpleDcel.HalfEdgeRecord halfEdgeRecord = new SimpleDcel.HalfEdgeRecord();
+        halfEdgeRecord.setOrigin(origin);
+        halfEdgeRecord.setIncidentFace(leftFace);
+        halfEdgeRecordMap.put(halfEdge, halfEdgeRecord);
+
         for(HalfEdge candidate: originRecord.incoming) {
             SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
-                candidateRecord.setNext(halfEdge);
-                currentRecord.setPrev(candidate);
+                if (candidateRecord.getNext() == null) {
+                    candidateRecord.setNext(halfEdge);
+                    halfEdgeRecord.setPrev(candidate);
+                    break;
+                } else {
+                    HalfEdge minAngle = this.minAngleFinder.minAngleFromBase(origin.getPoint(), candidate, candidateRecord.getNext(), halfEdge);
+                    if (minAngle.equals(halfEdge)) {
+                        halfEdgeRecordMap.get(candidateRecord.getNext()).setPrev(null);
+                        candidateRecord.setNext(halfEdge);
+                        halfEdgeRecord.setPrev(candidate);
+                        break;
+                    }
+                }
             }
         }
         //set next/prev at destination
         for(HalfEdge candidate: destRecord.outgoing) {
             SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord != null && candidateRecord.getIncidentFace().equals(leftFace)) {
-                currentRecord.setNext(candidate);
-                candidateRecord.setPrev(halfEdge);
+                if (candidateRecord.getPrev() == null){
+                    halfEdgeRecord.setNext(candidate);
+                    candidateRecord.setPrev(halfEdge);
+                    break;
+                } else {
+                    HalfEdge minAngle = this.minAngleFinder.minAngleFromBase(destination.getPoint(), candidate, candidateRecord.getPrev(), halfEdge);
+                    if (minAngle.equals(halfEdge)){
+                        halfEdgeRecordMap.get(candidateRecord.getPrev()).setNext(null);
+                        candidateRecord.setPrev(halfEdge);
+                        halfEdgeRecord.setNext(candidate);
+                        break;
+                    }
+                }
             }
         }
         //set twin
@@ -86,7 +112,7 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord.getOrigin().equals(origin)) {
                 candidateRecord.setTwin(halfEdge);
-                currentRecord.setTwin(candidate);
+                halfEdgeRecord.setTwin(candidate);
                 break;
             }
         }
@@ -94,7 +120,7 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
             SimpleDcel.HalfEdgeRecord candidateRecord = halfEdgeRecordMap.get(candidate);
             if (candidateRecord.getOrigin().equals(destination)) {
                 candidateRecord.setTwin(halfEdge);
-                currentRecord.setTwin(candidate);
+                halfEdgeRecord.setTwin(candidate);
                 break;
             }
         }
@@ -228,5 +254,48 @@ public class EdgeByEdgeDcelBuilder implements DcelBuilder {
         final List<HalfEdge> incoming = new ArrayList<HalfEdge>();
         Integer component;
     }
+
+    private static class MinAngleFinder  {
+        /**
+         * Creates a vector from an HalfEdge, starting at the specified point
+         * @param base
+         * @param point
+         * @return
+         */
+        private Point mkVector(HalfEdge base, Point point) {
+            if (getFirstPoint(base).equals(point)) {
+                return subtract(getSecondPoint(base), getFirstPoint(base));
+            } else {
+                return subtract(getBeforeLastPoint(base), getLastPoint(base));
+            }
+        }
+
+        private Point getLastPoint(HalfEdge he) {
+            return he.getGeometry().getPointN(he.getGeometry().getNumPoints() - 1);
+        }
+
+        private Point getBeforeLastPoint(HalfEdge he) {
+            return he.getGeometry().getPointN(he.getGeometry().getNumPoints() - 2);
+        }
+
+        private Point getFirstPoint(HalfEdge he) {
+            return he.getGeometry().getPointN(0);
+        }
+
+        private Point getSecondPoint(HalfEdge he) {
+            return he.getGeometry().getPointN(1);
+        }
+
+
+
+
+        public HalfEdge minAngleFromBase(Point origin, HalfEdge base, HalfEdge e1, HalfEdge e2) {
+            Point p0 = mkVector(base, origin);
+            Point p1 = mkVector(e1, origin);
+            Point p2 = mkVector(e2, origin);
+            return angle(p1, p0) < angle(p2, p0)  ? e1 : e2;
+        }
+    }
+
 }
 

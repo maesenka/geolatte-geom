@@ -26,10 +26,7 @@ import org.geolatte.geom.subdivision.*;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.geolatte.geom.dcel.THalfEdge.halfedge;
 import static org.geolatte.geom.dcel.TVertex.vertex;
@@ -168,10 +165,28 @@ public class TestSimpleDCEL {
                 next = dcel.getHalfEdges().getNext(current);
             }while (!next.equals(start));
         }
-
-
     }
 
+    @Test
+    public void testBoundariesForFace1() {
+        Set<HalfEdge> foundEdges = new HashSet<HalfEdge>();
+        HalfEdge start = dcel.getFaces().getOuterComponent(f1);
+        foundEdges.add(start);
+        HalfEdge next = dcel.getHalfEdges().getNext(start);
+        do {
+            foundEdges.add(next);
+            next = dcel.getHalfEdges().getNext(next);
+        }while (!next.equals(start));
+
+        assertEquals(6, foundEdges.size());
+        assertTrue(foundEdges.contains(heMap.get("e1.1")));
+        assertTrue(foundEdges.contains(heMap.get("e2.1")));
+        assertTrue(foundEdges.contains(heMap.get("e3.1")));
+        assertTrue(foundEdges.contains(heMap.get("e5.1")));
+        assertTrue(foundEdges.contains(heMap.get("e5.2")));
+        assertTrue(foundEdges.contains(heMap.get("e4.1")));
+
+        }
 
 
 
