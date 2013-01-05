@@ -175,7 +175,7 @@ public class Vector {
     /**
      * Returns the angle between the vectors in the 2D-plane determined by the specified {@code Point}s.
      *
-     * <p>The result will be in the range of [0, 2*PI]. If the angle from the first to the second operand is counterclockwise, then the result is positive.</p>
+     * <p>The result will be in the range of (-PI, PI]. If the angle from the first to the second operand is counterclockwise, then the result is positive.</p>
      *
      *
      * @param p0 the first operand
@@ -185,7 +185,14 @@ public class Vector {
     public static double angle(Point p0, Point p1) {
         double a1 = Math.atan2(p0.getY(), p0.getX());
         double a2 = Math.atan2(p1.getY(), p1.getX());
-        return a2 - a1;
+        double result =  a2 - a1;
+        if (result <= - Math.PI) {
+            return 2*Math.PI + result;
+        } else if (result > Math.PI) {
+            return result - 2*Math.PI;
+        } else {
+            return result;
+        }
     }
 
 }
