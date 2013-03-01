@@ -143,17 +143,21 @@ public class EdgeByEdgeDcelBuilder<V extends Vertex, E extends HalfEdge, F exten
         if (isNewVertex(originRecord) && isNewVertex(destRecord)) {
             Integer comp = componentCounter++;
             originRecord.component = comp;
+            vertexRecordList.addToComponentRecordMap(originRecord);
             destRecord.component = comp;
+            vertexRecordList.addToComponentRecordMap(destRecord);
         } else if (isNewVertex(originRecord)){
             assert(destRecord.component != null);
             originRecord.component = destRecord.component;
+            vertexRecordList.addToComponentRecordMap(originRecord);
         } else if (isNewVertex(destRecord)) {
             assert (originRecord.component != null);
             destRecord.component = originRecord.component;
+            vertexRecordList.addToComponentRecordMap(destRecord);
         } else { //neither are new
             assert (originRecord.component != null);
             assert(destRecord.component != null);
-            vertexRecordList.relabelComponents(originRecord.component, destRecord.component);
+            vertexRecordList.relabelComponents(destRecord.component, originRecord.component);
         }
         originRecord.outgoing.add(halfEdge);
         destRecord.incoming.add(halfEdge);
@@ -224,6 +228,7 @@ public class EdgeByEdgeDcelBuilder<V extends Vertex, E extends HalfEdge, F exten
     private static class VertexRecordList<V extends Vertex,E extends HalfEdge> {
 
         final private Map<V, VertexRecord<E>> vertexRecordMap = new HashMap<V, VertexRecord<E>>();
+        final private HashMap<Integer, HashSet<VertexRecord<E>>> componentToRecordMap = new HashMap<Integer, HashSet<VertexRecord<E>>>();
 
         VertexRecord<E> getVertexRecord(V v) {
             VertexRecord<E> record = vertexRecordMap.get(v);
@@ -234,10 +239,31 @@ public class EdgeByEdgeDcelBuilder<V extends Vertex, E extends HalfEdge, F exten
             return record;
         }
 
-        public void relabelComponents(Integer newComponent, Integer oldComponent) {
-            for (VertexRecord record : vertexRecordMap.values()) {
-                if (oldComponent.equals(record.component)) {
-                    record.component = newComponent;
+        public void removeFromComponentRecordMap(VertexRecord<E> record) {
+            HashSet<VertexRecord<E>> vertexRecords = componentToRecordMap.get(record.component);
+            if (vertexRecords != null) {
+                vertexRecords.remove(record);
+            }
+        }
+
+        public void addToComponentRecordMap(VertexRecord<E> record) {
+            HashSet<VertexRecord<E>> vertexRecords = componentToRecordMap.get(record.component);
+            if (vertexRecords == null) {
+                vertexRecords = new HashSet<VertexRecord<E>>();
+                componentToRecordMap.put(record.component, vertexRecords);
+            }
+            vertexRecords.add(record);
+        }
+
+        public void relabelComponents(Integer oldComponent, Integer newComponent) {
+            if (!oldComponent.equals(newComponent)) {
+                HashSet<VertexRecord<E>> vertexRecords = componentToRecordMap.get(oldComponent);
+                if (vertexRecords != null) {
+                    for (VertexRecord<E> record : new ArrayList<VertexRecord<E>>(vertexRecords)) {
+                        removeFromComponentRecordMap(record);
+                        record.component = newComponent;
+                        addToComponentRecordMap(record);
+                    }
                 }
             }
         }
