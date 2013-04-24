@@ -46,7 +46,7 @@ public class THalfEdge implements HalfEdge {
 
     public THalfEdge(String id, TVertex o, TVertex d, TFace leftFace, TFace rightFace) {
         Point start = o.getPoint();
-        Point end = o.getPoint();
+        Point end = d.getPoint();
         geometry = linestring(0, c(start.getX(), start.getY()), c(end.getX(), end.getY()));
         this.id = id;
         this.leftFace = leftFace;
